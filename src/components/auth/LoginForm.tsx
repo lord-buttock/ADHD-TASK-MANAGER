@@ -19,11 +19,15 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setError(null)
     setLoading(true)
 
+    console.log('Attempting sign in...', { email })
     const { error } = await signIn(email, password)
 
     if (error) {
+      console.error('Sign in error:', error)
       setError(error.message)
       setLoading(false)
+    } else {
+      console.log('Sign in successful')
     }
   }
 
