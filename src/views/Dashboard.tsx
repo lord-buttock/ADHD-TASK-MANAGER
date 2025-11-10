@@ -1,14 +1,35 @@
+import { useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTasks } from '../hooks/useTasks'
 import { Button } from '../components/ui/Button'
-import { Card } from '../components/ui/Card'
+import { TaskList } from '../components/tasks/TaskList'
+import { TaskForm } from '../components/tasks/TaskForm'
+import { NextTaskCard } from '../components/tasks/NextTaskCard'
+import { WIPWarning } from '../components/tasks/WIPWarning'
+import { TaskFilters } from '../components/tasks/TaskFilters'
+import type { TaskArea, TaskStatus } from '../lib/constants'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
+  const { data: tasks = [], isLoading, error } = useTasks()
+
+  const [showTaskForm, setShowTaskForm] = useState(false)
+  const [selectedArea, setSelectedArea] = useState<TaskArea | 'all'>('all')
+  const [selectedStatus, setSelectedStatus] = useState<TaskStatus | 'all'>('all')
+  const [showCompleted, setShowCompleted] = useState(true)
+
+  // Filter tasks based on selections
+  const filteredTasks = tasks.filter((task) => {
+    if (selectedArea !== 'all' && task.area !== selectedArea) return false
+    if (selectedStatus !== 'all' && task.status !== selectedStatus) return false
+    return true
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">ADHD Task Manager</h1>
           <div className="flex items-center gap-4">
@@ -22,26 +43,65 @@ export function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <Card>
+        {/* Add Task Button */}
+        <div className="mb-6">
+          <Button onClick={() => setShowTaskForm(true)} className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add Task
+          </Button>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-800">Failed to load tasks. Please try refreshing the page.</p>
+          </div>
+        )}
+
+        {isLoading ? (
           <div className="text-center py-12">
-            <div className="mb-4 inline-block p-4 bg-blue-100 rounded-full">
-              <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading tasks...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* WIP Warning */}
+              <WIPWarning tasks={tasks} />
+
+              {/* Next Task Recommendation */}
+              <NextTaskCard tasks={tasks} />
+
+              {/* Task List */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h2 className="text-xl font-bold mb-4">
+                  All Tasks ({filteredTasks.length})
+                </h2>
+                <TaskList
+                  tasks={filteredTasks}
+                  groupByStatus={true}
+                  showCompleted={showCompleted}
+                />
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Your Task Manager!</h2>
-            <p className="text-gray-600 mb-6">
-              You're successfully authenticated. Ready to build Phase 2!
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-green-700 font-medium">Phase 1 Complete!</span>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <TaskFilters
+                selectedArea={selectedArea}
+                selectedStatus={selectedStatus}
+                showCompleted={showCompleted}
+                onAreaChange={setSelectedArea}
+                onStatusChange={setSelectedStatus}
+                onShowCompletedChange={setShowCompleted}
+              />
             </div>
           </div>
-        </Card>
+        )}
       </main>
+
+      {/* Task Form Modal */}
+      {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} />}
     </div>
   )
 }
