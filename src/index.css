@@ -1,24 +1,27 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900 antialiased;
-  }
+body {
+  background-color: #f9fafb;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer components {
-  /* Custom scrollbar for better UX */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
-  }
+/* Custom scrollbar for better UX */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-track {
-    @apply bg-gray-100 rounded;
-  }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+  border-radius: 0.25rem;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded hover:bg-gray-400;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 0.25rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
 }
