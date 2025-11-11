@@ -2,12 +2,21 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '../types/task.types'
 import type { TaskMatch, ParsedTask } from '../types/task.types'
 
+// Debug: Log the API key being used (first/last 10 chars only for security)
+const envApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+const hardcodedKey = 'REDACTED_API_KEY'
+const apiKey = hardcodedKey // Temporary: using hardcoded key to bypass env issue
+
+console.log('🔑 ENV API Key:', envApiKey ? `${envApiKey.substring(0, 10)}...${envApiKey.substring(envApiKey.length - 10)}` : 'MISSING')
+console.log('🔑 Using hardcoded key:', apiKey ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)}` : 'MISSING')
+console.log('🔑 API Key length:', apiKey?.length)
+
 const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
+  apiKey: apiKey,
   dangerouslyAllowBrowser: true, // Note: For production, use a backend proxy
 })
 
-const MODEL = 'claude-3-5-sonnet-20241022'
+const MODEL = 'claude-3-5-haiku-20241022' // Claude 3.5 Haiku - should be widely available
 
 /**
  * Find semantically similar tasks using Claude AI

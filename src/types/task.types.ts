@@ -26,3 +26,10 @@ export interface ParsedTask {
   due_date?: string
   reasoning?: string
 }
+
+export interface ParsedTaskWithMatches {
+  parsedTask: ParsedTask
+  matches: TaskMatch[]
+  action?: 'create' | 'merge' // User's decision
+  mergeIntoTaskId?: string // If action is 'merge', which task to merge into
+}

@@ -102,3 +102,15 @@ export function useToggleImportant() {
     },
   })
 }
+
+export function useAppendNotes() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes: string }) =>
+      taskService.appendNotes(id, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] })
+    },
+  })
+}

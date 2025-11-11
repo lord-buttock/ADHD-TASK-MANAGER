@@ -38,6 +38,8 @@ export function QuickNote({ onProcess }: QuickNoteProps) {
       setNote('') // Clear on success
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process note')
+    } finally {
+      // Always reset processing state
       setProcessing(false)
     }
   }

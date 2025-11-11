@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { useTasks, useCreateTask, useIncompleteTasks } from '../hooks/useTasks'
+import { useTasks, useCreateTask, useIncompleteTasks, useAppendNotes } from '../hooks/useTasks'
 import { Button } from '../components/ui/Button'
 import { TaskList } from '../components/tasks/TaskList'
 import { TaskForm } from '../components/tasks/TaskForm'
@@ -9,29 +9,26 @@ import { NextTaskCard } from '../components/tasks/NextTaskCard'
 import { WIPWarning } from '../components/tasks/WIPWarning'
 import { TaskFilters } from '../components/tasks/TaskFilters'
 import { QuickNote } from '../components/tasks/QuickNote'
-import { TaskMatchReview } from '../components/tasks/TaskMatchReview'
 import { AITaskReview } from '../components/tasks/AITaskReview'
 import { findSimilarTasks, categorizeTasks } from '../services/aiService'
-import { taskService } from '../services/taskService'
 import type { TaskArea, TaskStatus } from '../lib/constants'
-import type { TaskMatch, ParsedTask } from '../types/task.types'
+import type { ParsedTaskWithMatches } from '../types/task.types'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
   const { data: tasks = [], isLoading, error } = useTasks()
   const { data: incompleteTasks = [] } = useIncompleteTasks()
   const createTask = useCreateTask()
+  const appendNotes = useAppendNotes()
 
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [selectedArea, setSelectedArea] = useState<TaskArea | 'all'>('all')
   const [selectedStatus, setSelectedStatus] = useState<TaskStatus | 'all'>('all')
   const [showCompleted, setShowCompleted] = useState(true)
 
-  // AI processing state
+  // AI processing state - NEW STRUCTURE
   const [currentNote, setCurrentNote] = useState('')
-  const [matches, setMatches] = useState<TaskMatch[]>([])
-  const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([])
-  const [showMatchReview, setShowMatchReview] = useState(false)
+  const [tasksWithMatches, setTasksWithMatches] = useState<ParsedTaskWithMatches[]>([])
   const [showTaskReview, setShowTaskReview] = useState(false)
 
   // Filter tasks based on selections
@@ -41,69 +38,66 @@ export function Dashboard() {
     return true
   })
 
-  // Handle QuickNote processing
+  // Handle QuickNote processing - NEW FLOW
   const handleProcessNote = async (note: string) => {
     setCurrentNote(note)
 
-    // Step 1: Find similar tasks
-    const foundMatches = await findSimilarTasks(note, incompleteTasks)
+    // Step 1: Categorize the note into individual tasks first
+    const categorized = await categorizeTasks(note)
 
-    if (foundMatches.length > 0) {
-      // Show match review if similar tasks found
-      setMatches(foundMatches)
-      setShowMatchReview(true)
-    } else {
-      // No matches, proceed to AI categorization
-      const categorized = await categorizeTasks(note)
-      setParsedTasks(categorized)
-      setShowTaskReview(true)
-    }
-  }
+    // Step 2: For each categorized task, find potential matches
+    const results: ParsedTaskWithMatches[] = await Promise.all(
+      categorized.map(async (parsedTask) => {
+        const matches = await findSimilarTasks(parsedTask.title, incompleteTasks)
+        return {
+          parsedTask,
+          matches,
+          action: matches.length > 0 ? undefined : 'create', // Default to 'create' if no matches
+        }
+      })
+    )
 
-  // Handle merging note into existing task
-  const handleMergeTask = async (taskId: string) => {
-    await taskService.appendNotes(taskId, currentNote)
-    setShowMatchReview(false)
-    setCurrentNote('')
-    setMatches([])
-  }
-
-  // Handle creating new tasks after match rejection
-  const handleCreateNewAfterMatch = async () => {
-    setShowMatchReview(false)
-    const categorized = await categorizeTasks(currentNote)
-    setParsedTasks(categorized)
+    // Store the results and show review
+    setTasksWithMatches(results)
     setShowTaskReview(true)
   }
 
-  // Handle accepting AI-created tasks
-  const handleAcceptTasks = async (tasksToCreate: ParsedTask[]) => {
+  // Handle accepting tasks with their individual actions
+  const handleAcceptTasks = async (tasksToProcess: ParsedTaskWithMatches[]) => {
     if (!user) return
 
-    for (const task of tasksToCreate) {
-      await createTask.mutateAsync({
-        user_id: user.id,
-        title: task.title,
-        notes: task.notes,
-        urgent: task.urgent,
-        important: task.important,
-        area: task.area,
-        estimated_minutes: task.estimated_minutes,
-        due_date: task.due_date,
-      })
+    for (const item of tasksToProcess) {
+      if (item.action === 'merge' && item.mergeIntoTaskId) {
+        // Merge: append the task title/notes to existing task
+        const noteToAdd = item.parsedTask.notes
+          ? `${item.parsedTask.title}\n${item.parsedTask.notes}`
+          : item.parsedTask.title
+        await appendNotes.mutateAsync({ id: item.mergeIntoTaskId, notes: noteToAdd })
+      } else if (item.action === 'create') {
+        // Create: create new task
+        await createTask.mutateAsync({
+          user_id: user.id,
+          title: item.parsedTask.title,
+          notes: item.parsedTask.notes,
+          urgent: item.parsedTask.urgent,
+          important: item.parsedTask.important,
+          area: item.parsedTask.area,
+          estimated_minutes: item.parsedTask.estimated_minutes,
+          due_date: item.parsedTask.due_date,
+        })
+      }
     }
 
     setShowTaskReview(false)
     setCurrentNote('')
-    setParsedTasks([])
+    setTasksWithMatches([])
   }
 
   // Handle canceling AI review
   const handleCancelReview = () => {
-    setShowMatchReview(false)
     setShowTaskReview(false)
-    setMatches([])
-    setParsedTasks([])
+    setTasksWithMatches([])
+    setCurrentNote('')
   }
 
   return (
@@ -194,20 +188,9 @@ export function Dashboard() {
       {/* Modals */}
       {showTaskForm && <TaskForm onClose={() => setShowTaskForm(false)} />}
 
-      {showMatchReview && (
-        <TaskMatchReview
-          noteContent={currentNote}
-          matches={matches}
-          onMerge={handleMergeTask}
-          onCreateNew={handleCreateNewAfterMatch}
-          onCancel={handleCancelReview}
-        />
-      )}
-
       {showTaskReview && (
         <AITaskReview
-          tasks={parsedTasks}
-          onAcceptAll={() => handleAcceptTasks(parsedTasks)}
+          tasksWithMatches={tasksWithMatches}
           onAccept={handleAcceptTasks}
           onCancel={handleCancelReview}
         />

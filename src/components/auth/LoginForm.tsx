@@ -19,15 +19,19 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
     setError(null)
     setLoading(true)
 
-    console.log('Attempting sign in...', { email })
+    console.log('🔐 Attempting sign in...', { email })
     const { error } = await signIn(email, password)
 
+    console.log('🔐 Sign in result:', { error, hasError: !!error })
+
     if (error) {
-      console.error('Sign in error:', error)
+      console.error('🔐 Sign in error:', error)
       setError(error.message)
       setLoading(false)
     } else {
-      console.log('Sign in successful')
+      console.log('🔐 Sign in successful! Waiting for auth state change...')
+      // Keep loading true - AuthContext will handle the redirect
+      setTimeout(() => setLoading(false), 5000) // Safety timeout
     }
   }
 
