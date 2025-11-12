@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react'
 import { Edit2, Trash2, Check, Star, Calendar, ChevronDown, ChevronRight } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
 import { useCompleteHabit, useDeleteHabit, useIsCompletedToday } from '../../hooks/useHabits'
 import { habitAI } from '../../services/habitAI'
 import { useAuth } from '../../contexts/AuthContext'
@@ -123,8 +122,8 @@ export function HabitCard({ habit, onEdit }: HabitCardProps) {
       <div
         className="rounded-lg border-2 p-6 transition-all hover:shadow-lg relative overflow-hidden"
         style={{
-          backgroundColor: habit.color + '20',
-          borderColor: habit.color,
+          backgroundColor: habit.color ? habit.color + '20' : '#3b82f620',
+          borderColor: habit.color || '#3b82f6',
         }}
       >
         {/* Edit and Delete buttons */}
@@ -228,7 +227,7 @@ export function HabitCard({ habit, onEdit }: HabitCardProps) {
                 }`
           }`}
           style={{
-            backgroundColor: isCompleted ? '#10b981' : habit.color,
+            backgroundColor: isCompleted ? '#10b981' : habit.color || '#3b82f6',
           }}
         >
           {isCompleted ? (

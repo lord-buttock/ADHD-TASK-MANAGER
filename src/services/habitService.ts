@@ -11,14 +11,13 @@ type HabitCompletion = Database['public']['Tables']['habit_completions']['Row']
  */
 export async function calculateStreak(
   habitId: string,
-  userId: string
+  _userId: string
 ): Promise<{ currentStreak: number; recordStreak: number }> {
   // Fetch all completions for habit, ordered by date DESC
   const { data: completions, error } = await supabase
     .from('habit_completions')
     .select('completed_at')
     .eq('habit_id', habitId)
-    .eq('user_id', userId)
     .order('completed_at', { ascending: false })
 
   if (error) throw error
@@ -60,7 +59,7 @@ export async function calculateStreak(
 /**
  * Check if habit was completed today
  */
-export async function isCompletedToday(habitId: string, userId: string): Promise<boolean> {
+export async function isCompletedToday(habitId: string, _userId: string): Promise<boolean> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -68,7 +67,6 @@ export async function isCompletedToday(habitId: string, userId: string): Promise
     .from('habit_completions')
     .select('id')
     .eq('habit_id', habitId)
-    .eq('user_id', userId)
     .gte('completed_at', today.toISOString())
     .maybeSingle()
 
@@ -178,8 +176,7 @@ export async function completeHabit(
   // Insert completion record
   const { error: insertError } = await supabase.from('habit_completions').insert({
     habit_id: habitId,
-    user_id: userId,
-    completed_at: new Date().toISOString(),
+    completed_at: new Date().toISOString().split('T')[0], // Date only (YYYY-MM-DD)
   })
 
   if (insertError) throw insertError
@@ -219,7 +216,7 @@ export async function completeHabit(
  */
 export async function getCompletionHistory(
   habitId: string,
-  userId: string,
+  _userId: string,
   days: number = 30
 ): Promise<HabitCompletion[]> {
   const startDate = new Date()
@@ -229,7 +226,6 @@ export async function getCompletionHistory(
     .from('habit_completions')
     .select('*')
     .eq('habit_id', habitId)
-    .eq('user_id', userId)
     .gte('completed_at', startDate.toISOString())
     .order('completed_at', { ascending: false })
 

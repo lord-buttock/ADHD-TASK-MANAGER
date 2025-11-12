@@ -197,22 +197,24 @@ export async function mergeTaskWithExisting(
 
   if (fetchError) throw fetchError
 
+  const existing = existingTask as Task
+
   // Append new context to existing task notes
   const timestamp = new Date().toLocaleString()
   const meetingContext = `\n\n[Added from meeting ${timestamp}]\n${newTask.context}\nDue: ${
     newTask.dueDate || 'Not specified'
   }`
 
-  const updatedNotes = (existingTask.notes || '') + meetingContext
+  const updatedNotes = (existing.notes || '') + meetingContext
 
   // Update existing task
   const { error } = await supabase
     .from('tasks')
     .update({
       notes: updatedNotes,
-      due_date: newTask.dueDate || existingTask.due_date,
-      urgent: newTask.urgent || existingTask.urgent,
-      important: newTask.important || existingTask.important,
+      due_date: newTask.dueDate || existing.due_date,
+      urgent: newTask.urgent || existing.urgent,
+      important: newTask.important || existing.important,
       meeting_id: meetingId,
       updated_at: new Date().toISOString(),
     })
@@ -236,8 +238,8 @@ export async function createTaskFromExtracted(
       title: task.title,
       urgent: task.urgent,
       important: task.important,
-      status: 'todo',
-      area: task.area || 'work',
+      status: 'todo' as const,
+      area: (task.area || 'work') as 'work' | 'personal' | 'health' | 'social',
       due_date: task.dueDate || null,
       estimated_minutes: task.estimatedMinutes || null,
       notes: `From meeting:\n${task.context}`,
@@ -248,7 +250,7 @@ export async function createTaskFromExtracted(
     .single()
 
   if (error) throw error
-  return data.id
+  return (data as { id: string }).id
 }
 
 /**
@@ -328,7 +330,7 @@ export async function updateMeetingSummary(
 ): Promise<void> {
   const { error } = await supabase
     .from('meeting_transcripts')
-    .update({ summary })
+    .update({ summary } as any)
     .eq('id', meetingId)
     .eq('user_id', userId)
 
@@ -345,7 +347,7 @@ export async function updateMeetingNotes(
 ): Promise<void> {
   const { error } = await supabase
     .from('meeting_transcripts')
-    .update({ notes })
+    .update({ notes } as any)
     .eq('id', meetingId)
     .eq('user_id', userId)
 

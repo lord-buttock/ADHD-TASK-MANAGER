@@ -74,8 +74,6 @@ export function MeetingDetailModal({ meeting, onClose, onUpdate }: MeetingDetail
               })}
               {' • '}
               {formatDuration(meeting.duration_seconds)}
-              {' • '}
-              {meeting.word_count} words
             </p>
           </div>
           <button

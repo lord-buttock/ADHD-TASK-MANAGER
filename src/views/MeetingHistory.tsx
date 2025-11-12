@@ -159,8 +159,6 @@ export function MeetingHistory() {
                     </div>
                     <span>•</span>
                     <span>{formatDuration(meeting.duration_seconds)}</span>
-                    <span>•</span>
-                    <span>{meeting.word_count} words</span>
                   </div>
                 </button>
 

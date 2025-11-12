@@ -58,7 +58,7 @@ export function useUpdateHabit() {
 
       return { previousHabits }
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       // Rollback on error
       if (context?.previousHabits) {
         queryClient.setQueryData([HABITS_QUERY_KEY], context.previousHabits)
@@ -90,7 +90,7 @@ export function useDeleteHabit() {
 
       return { previousHabits }
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       // Rollback on error
       if (context?.previousHabits) {
         queryClient.setQueryData([HABITS_QUERY_KEY], context.previousHabits)
@@ -105,7 +105,7 @@ export function useCompleteHabit() {
   return useMutation({
     mutationFn: ({ habitId, userId }: { habitId: string; userId: string }) =>
       habitService.completeHabit(habitId, userId),
-    onSuccess: (result, variables) => {
+    onSuccess: (_result, variables) => {
       // Force refetch to get updated streak values
       queryClient.invalidateQueries({ queryKey: [HABITS_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['habit-completions', variables.habitId] })

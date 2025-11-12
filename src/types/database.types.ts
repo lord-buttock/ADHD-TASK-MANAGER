@@ -26,6 +26,7 @@ export interface Database {
           is_pinned: boolean
           completed_at: string | null
           note_history: Json
+          meeting_id: string | null
         }
         Insert: {
           id?: string
@@ -43,6 +44,7 @@ export interface Database {
           is_pinned?: boolean
           completed_at?: string | null
           note_history?: Json
+          meeting_id?: string | null
         }
         Update: {
           id?: string
@@ -60,6 +62,7 @@ export interface Database {
           is_pinned?: boolean
           completed_at?: string | null
           note_history?: Json
+          meeting_id?: string | null
         }
       }
       habits: {
@@ -73,6 +76,9 @@ export interface Database {
           created_at: string
           updated_at: string
           is_active: boolean
+          icon: string | null
+          color: string | null
+          notes: string | null
         }
         Insert: {
           id?: string
@@ -84,6 +90,9 @@ export interface Database {
           created_at?: string
           updated_at?: string
           is_active?: boolean
+          icon?: string | null
+          color?: string | null
+          notes?: string | null
         }
         Update: {
           id?: string
@@ -95,6 +104,9 @@ export interface Database {
           created_at?: string
           updated_at?: string
           is_active?: boolean
+          icon?: string | null
+          color?: string | null
+          notes?: string | null
         }
       }
       habit_completions: {
@@ -170,6 +182,38 @@ export interface Database {
           stress?: number
           notes?: string | null
           logged_at?: string
+        }
+      }
+      meeting_transcripts: {
+        Row: {
+          id: string
+          user_id: string
+          title: string | null
+          transcript: string
+          summary: string | null
+          duration_seconds: number | null
+          created_at: string
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title?: string | null
+          transcript: string
+          summary?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string | null
+          transcript?: string
+          summary?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+          notes?: string | null
         }
       }
     }

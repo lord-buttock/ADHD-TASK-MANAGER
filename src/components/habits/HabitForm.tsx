@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Sparkles, Loader2 } from 'lucide-react'
+import { X, Sparkles } from 'lucide-react'
 import { useCreateHabit, useUpdateHabit } from '../../hooks/useHabits'
 import { habitAI, type HabitSuggestion } from '../../services/habitAI'
 import { Button } from '../ui/Button'

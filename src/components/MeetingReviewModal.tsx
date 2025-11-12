@@ -88,21 +88,22 @@ export function MeetingReviewModal({
             .eq('id', state.mergeWithId)
             .single()
 
-          if (existingTask) {
+          if (existingTask as Task) {
+            const existing = existingTask as Task
             const timestamp = new Date().toLocaleString()
             const meetingContext = `\n\n[Added from meeting ${timestamp}]\n${state.task.context}\nDue: ${
               state.task.dueDate || 'Not specified'
             }`
-            const updatedNotes = (existingTask.notes || '') + meetingContext
+            const updatedNotes = (existing.notes || '') + meetingContext
 
             // Use React Query mutation for cache invalidation
             await updateTask.mutateAsync({
               id: state.mergeWithId,
               updates: {
                 notes: updatedNotes,
-                due_date: state.task.dueDate || existingTask.due_date,
-                urgent: state.task.urgent || existingTask.urgent,
-                important: state.task.important || existingTask.important,
+                due_date: state.task.dueDate || existing.due_date,
+                urgent: state.task.urgent || existing.urgent,
+                important: state.task.important || existing.important,
                 meeting_id: processedTranscript.meetingId,
                 updated_at: new Date().toISOString(),
               },
