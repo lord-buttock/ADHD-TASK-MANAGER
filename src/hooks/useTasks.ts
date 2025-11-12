@@ -63,7 +63,31 @@ export function useUpdateTaskStatus() {
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       taskService.updateTaskStatus(id, status),
     onSuccess: () => {
+      // Force refetch all task queries
       queryClient.invalidateQueries({ queryKey: [TASKS_QUERY_KEY] })
+    },
+    onMutate: async ({ id, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: [TASKS_QUERY_KEY] })
+
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData([TASKS_QUERY_KEY])
+
+      // Optimistically update to the new value
+      queryClient.setQueryData([TASKS_QUERY_KEY], (old: any) => {
+        if (!old) return old
+        return old.map((task: any) =>
+          task.id === id ? { ...task, status } : task
+        )
+      })
+
+      return { previousTasks }
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData([TASKS_QUERY_KEY], context.previousTasks)
+      }
     },
   })
 }

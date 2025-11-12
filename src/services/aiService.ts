@@ -2,14 +2,12 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '../types/task.types'
 import type { TaskMatch, ParsedTask } from '../types/task.types'
 
-// Debug: Log the API key being used (first/last 10 chars only for security)
-const envApiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-const hardcodedKey = 'REDACTED_API_KEY'
-const apiKey = hardcodedKey // Temporary: using hardcoded key to bypass env issue
+const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
 
-console.log('🔑 ENV API Key:', envApiKey ? `${envApiKey.substring(0, 10)}...${envApiKey.substring(envApiKey.length - 10)}` : 'MISSING')
-console.log('🔑 Using hardcoded key:', apiKey ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)}` : 'MISSING')
-console.log('🔑 API Key length:', apiKey?.length)
+if (!apiKey) {
+  console.error('❌ VITE_ANTHROPIC_API_KEY is not set in environment variables')
+  throw new Error('Missing Anthropic API key. Please set VITE_ANTHROPIC_API_KEY in your .env.local file.')
+}
 
 const anthropic = new Anthropic({
   apiKey: apiKey,
@@ -24,27 +22,57 @@ const MODEL = 'claude-3-5-haiku-20241022' // Claude 3.5 Haiku - should be widely
  */
 export async function findSimilarTasks(
   noteContent: string,
-  existingTasks: Task[]
+  existingTasks: Task[] | string
 ): Promise<TaskMatch[]> {
-  if (existingTasks.length === 0) {
+  // Handle overload: if second param is userId string, fetch tasks first
+  let tasksToCompare: Task[]
+
+  if (typeof existingTasks === 'string') {
+    // Second param is userId - fetch tasks from database
+    const userId = existingTasks
+    const { supabase } = await import('../lib/supabase')
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['todo', 'in_progress'])
+
+    if (error) {
+      console.error('Error fetching tasks for similarity:', error)
+      return []
+    }
+
+    tasksToCompare = data || []
+  } else {
+    // Second param is already the tasks array
+    tasksToCompare = existingTasks
+  }
+
+  if (tasksToCompare.length === 0) {
     return []
   }
 
-  const prompt = `You're helping someone with ADHD manage their tasks. They just wrote this note:
+  const prompt = `You're helping someone with ADHD manage their tasks. They just wrote this new task:
 
 "${noteContent}"
 
 Here are their existing incomplete tasks:
-${existingTasks.map((t, i) => `${i + 1}. "${t.title}"${t.notes ? `\n   Notes: ${t.notes}` : ''}`).join('\n')}
+${tasksToCompare.map((t, i) => `${i + 1}. "${t.title}"${t.notes ? `\n   Notes: ${t.notes}` : ''}`).join('\n')}
 
-For each existing task, determine if the new note is related to it. Consider:
-- Semantic meaning, not just keywords
-- Context and intent
-- Examples:
-  * "application video" relates to "Make ADE video"
-  * "Ideas for students' work" relates to "Make ADE application video"
-  * "prep lesson" relates to "Friday lesson planning"
-  * But "email parents about video" and "prep lesson" are separate topics
+For each existing task, determine if the new task is DIRECTLY related to it.
+
+IMPORTANT RULES:
+- Only match if they are about the SAME project, goal, or activity
+- Different topics should NOT match, even if both are work/health/etc
+- Be very strict - when in doubt, DON'T match
+- Examples of GOOD matches:
+  * "add animations to ADE video" matches "Create ADE video" (same project)
+  * "buy ingredients for dinner" matches "Cook dinner tonight" (same activity)
+  * "call doctor about results" matches "Get blood test results" (same health issue)
+- Examples of BAD matches (DO NOT MATCH THESE):
+  * "get blood test" should NOT match "create video" (completely different)
+  * "email parents" should NOT match "prep lesson" (different tasks)
+  * "book appointment" should NOT match "take medication" (different health tasks)
 
 Return ONLY a JSON array of matches with similarity scores (0-100). Only include tasks with similarity >= 70.
 
@@ -53,11 +81,11 @@ Format:
   {
     "task_index": 0,
     "similarity": 85,
-    "reasoning": "Both are about the ADE application video"
+    "reasoning": "Both tasks are about the same ADE video project"
   }
 ]
 
-If no tasks are related, return an empty array: []`
+If no tasks are DIRECTLY related, return an empty array: []`
 
   try {
     const response = await anthropic.messages.create({
@@ -86,13 +114,48 @@ If no tasks are related, return an empty array: []`
 
     // Map matches to TaskMatch objects
     return matches.map((match: any) => ({
-      task: existingTasks[match.task_index],
+      task: tasksToCompare[match.task_index],
       similarity: match.similarity,
       reasoning: match.reasoning,
     }))
   } catch (error) {
     console.error('Error finding similar tasks:', error)
     return []
+  }
+}
+
+/**
+ * Generic Claude API call for any prompt
+ * Returns the text response from Claude
+ */
+export async function callClaudeAPI(
+  prompt: string,
+  options?: { temperature?: number; maxTokens?: number }
+): Promise<string> {
+  const { temperature = 0.7, maxTokens = 2048 } = options || {}
+
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: maxTokens,
+      temperature,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    })
+
+    const content = response.content[0]
+    if (content.type !== 'text') {
+      throw new Error('Unexpected response type from Claude')
+    }
+
+    return content.text
+  } catch (error) {
+    console.error('Error calling Claude API:', error)
+    throw error
   }
 }
 

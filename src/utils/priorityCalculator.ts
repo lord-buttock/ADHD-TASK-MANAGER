@@ -3,9 +3,9 @@ import type { Task } from '../types/task.types'
 // Eisenhower Matrix quadrants
 export type EisenhowerQuadrant =
   | 'urgent-important'     // Red - Do First
-  | 'urgent-not-important' // Orange - Schedule
-  | 'not-urgent-important' // Blue - Delegate
-  | 'not-urgent-not-important' // Gray - Eliminate
+  | 'urgent-not-important' // Orange - Delegate
+  | 'not-urgent-important' // Blue - Schedule
+  | 'not-urgent-not-important' // Gray - Low Priority
 
 export function getEisenhowerQuadrant(task: Task): EisenhowerQuadrant {
   if (task.urgent && task.important) return 'urgent-important'
@@ -27,9 +27,9 @@ export function getQuadrantColor(quadrant: EisenhowerQuadrant): string {
 export function getQuadrantLabel(quadrant: EisenhowerQuadrant): string {
   const labels = {
     'urgent-important': 'Do First',
-    'urgent-not-important': 'Schedule',
-    'not-urgent-important': 'Plan',
-    'not-urgent-not-important': 'Eliminate',
+    'urgent-not-important': 'Delegate',
+    'not-urgent-important': 'Schedule',
+    'not-urgent-not-important': 'Low Priority',
   }
   return labels[quadrant]
 }
