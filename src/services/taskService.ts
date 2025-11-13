@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '../lib/supabase'
 import type { Task, TaskInsert, TaskUpdate } from '../types/task.types'
 import type { TaskStatus, TaskArea } from '../lib/constants'

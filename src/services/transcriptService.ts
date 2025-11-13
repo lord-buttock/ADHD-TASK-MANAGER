@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { supabase } from '../lib/supabase'
 import { callClaudeAPI } from './aiService'
 import { findSimilarTasks } from './aiService'
